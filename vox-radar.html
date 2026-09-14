@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vox Radar · Conversational Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#070f1f;
+    --bg-alt:#0a1628;
+    --panel:#0d1d35;
+    --card:#12253f;
+    --card-hover:#16304f;
+    --border:rgba(148,180,214,0.14);
+    --border-strong:rgba(148,180,214,0.28);
+    --cyan:#3fd0f2;
+    --cyan-dim:rgba(63,208,242,0.16);
+    --teal:#2fdba0;
+    --teal-dim:rgba(47,219,160,0.14);
+    --amber:#f2b657;
+    --amber-dim:rgba(242,182,87,0.14);
+    --red:#f0616b;
+    --red-dim:rgba(240,97,107,0.14);
+    --text:#eaf2fb;
+    --text-dim:#93a8c4;
+    --text-faint:#5f7692;
+    --radius-s:6px;
+    --radius-m:10px;
+    --radius-l:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(1200px 800px at 85% -10%, #0e2038 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.brand,.navlabel,.kpi-value,.section-title{font-family:'Space Grotesk', sans-serif;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* ---------- APP SHELL ---------- */
+  .app{display:flex;min-height:100vh;}
+
+  .sidebar{
+    width:232px;flex-shrink:0;
+    background:var(--bg-alt);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;
+    padding:22px 14px;
+    position:sticky;top:0;height:100vh;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:4px 8px 22px 8px;}
+  .brand-mark{width:34px;height:34px;flex-shrink:0;}
+  .brand-text{line-height:1.05;}
+  .brand-text .b1{font-size:16px;font-weight:700;letter-spacing:0.5px;color:var(--text);}
+  .brand-text .b2{font-size:10.5px;color:var(--cyan);letter-spacing:1.5px;}
+
+  .nav{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+  .navitem{
+    display:flex;align-items:center;gap:11px;
+    padding:10px 12px;border-radius:var(--radius-s);
+    color:var(--text-dim);font-size:13.5px;font-weight:500;
+    border:1px solid transparent;transition:background .15s, color .15s;
+  }
+  .navitem svg{width:17px;height:17px;flex-shrink:0;}
+  .navitem:hover{background:var(--card);color:var(--text);}
+  .navitem.active{background:var(--cyan-dim);color:var(--cyan);border-color:rgba(63,208,242,0.25);}
+
+  .sidebar-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--border);}
+  .profile{display:flex;align-items:center;gap:10px;padding:8px;}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--teal));display:flex;align-items:center;justify-content:center;font-weight:700;color:#04121f;font-size:13px;}
+  .profile-name{font-size:12.5px;font-weight:600;}
+  .profile-role{font-size:11px;color:var(--text-faint);}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{
+    display:flex;align-items:center;gap:14px;
+    padding:16px 28px;border-bottom:1px solid var(--border);
+    background:rgba(10,22,40,0.6);backdrop-filter:blur(6px);
+    position:sticky;top:0;z-index:5;
+  }
+  .search{
+    flex:1;max-width:420px;display:flex;align-items:center;gap:8px;
+    background:var(--panel);border:1px solid var(--border);border-radius:999px;
+    padding:8px 14px;color:var(--text-faint);
+  }
+  .search svg{width:15px;height:15px;flex-shrink:0;}
+  .search input{background:none;border:none;outline:none;color:var(--text);width:100%;font-size:13px;}
+  .search input::placeholder{color:var(--text-faint);}
+  .topbar-spacer{flex:1;}
+  .pill{
+    display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;
+    background:var(--card);border:1px solid var(--border);font-size:12.5px;color:var(--text-dim);
+  }
+  .dot-live{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+
+  .view{padding:26px 28px 60px;}
+  .view.hidden{display:none;}
+
+  .view-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+  .view-title{font-size:22px;font-weight:600;margin:0;}
+  .view-sub{color:var(--text-faint);font-size:12.5px;margin-top:4px;}
+
+  /* ---------- KPI CARDS ---------- */
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+  .kpi-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-m);
+    padding:16px 16px;position:relative;overflow:hidden;
+  }
+  .kpi-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--cyan));}
+  .kpi-label{font-size:11px;color:var(--text-faint);margin-bottom:8px;letter-spacing:.2px;}
+  .kpi-value{font-size:23px;font-weight:600;}
+  .kpi-delta{font-size:11px;margin-top:6px;font-weight:500;}
+  .kpi-delta.up{color:var(--teal);}
+  .kpi-delta.down{color:var(--red);}
+
+  /* ---------- GRID PANELS ---------- */
+  .grid-2{display:grid;grid-template-columns:1.55fr 1fr;gap:14px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-m);padding:18px;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .panel-title{font-size:13.5px;font-weight:600;}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--text-faint);}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:8px;height:8px;border-radius:2px;display:inline-block;}
+
+  .heat-row{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:12.5px;}
+  .heat-name{width:78px;flex-shrink:0;color:var(--text-dim);}
+  .heat-bar-track{flex:1;height:6px;border-radius:4px;background:rgba(255,255,255,0.06);overflow:hidden;}
+  .heat-bar-fill{height:100%;border-radius:4px;}
+  .heat-count{width:64px;text-align:right;color:var(--text-faint);font-size:11px;flex-shrink:0;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{
+    text-align:left;font-size:10.5px;letter-spacing:.3px;color:var(--text-faint);
+    font-weight:600;padding:0 10px 10px;border-bottom:1px solid var(--border);
+  }
+  td{padding:11px 10px;border-bottom:1px solid var(--border);font-size:12.8px;vertical-align:middle;}
+  tr.rowlink{cursor:pointer;transition:background .12s;}
+  tr.rowlink:hover td{background:var(--card-hover);}
+  tr:last-child td{border-bottom:none;}
+  .cell-strong{font-weight:600;color:var(--text);}
+  .cell-dim{color:var(--text-faint);}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;}
+  .badge.risco{background:var(--red-dim);color:var(--red);}
+  .badge.atencao{background:var(--amber-dim);color:var(--amber);}
+  .badge.saudavel{background:var(--teal-dim);color:var(--teal);}
+  .badge.alta{background:var(--red-dim);color:var(--red);}
+  .badge.media{background:var(--amber-dim);color:var(--amber);}
+  .badge.baixa{background:var(--teal-dim);color:var(--teal);}
+  .badge.tag{background:var(--cyan-dim);color:var(--cyan);}
+
+  .sent-bar{display:flex;align-items:center;gap:8px;}
+  .sent-track{width:70px;height:5px;border-radius:4px;background:rgba(255,255,255,0.07);overflow:hidden;}
+  .sent-fill{height:100%;}
+
+  .go{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-faint);flex-shrink:0;}
+  tr.rowlink:hover .go{color:var(--cyan);border-color:var(--cyan);}
+
+  /* ---------- MEETINGS VIEW ---------- */
+  .filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .chip-filter{padding:7px 14px;border-radius:999px;border:1px solid var(--border);background:var(--panel);color:var(--text-dim);font-size:12px;}
+  .chip-filter.active{background:var(--cyan-dim);border-color:rgba(63,208,242,.3);color:var(--cyan);}
+
+  /* ---------- RAIO-X VIEW ---------- */
+  .rx-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
+  .rx-meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;color:var(--text-faint);font-size:12px;}
+  .rx-meta strong{color:var(--text);font-weight:600;}
+  .back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);font-size:12.5px;margin-bottom:14px;}
+  .back-btn:hover{color:var(--cyan);}
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--radius-s);
+    border:1px solid var(--border-strong);background:var(--card);color:var(--text);font-size:12.5px;font-weight:600;
+  }
+  .btn:hover{background:var(--card-hover);}
+  .btn.primary{background:linear-gradient(135deg,var(--cyan),#2ba8c9);border:none;color:#04121f;}
+  .btn.primary:hover{filter:brightness(1.08);}
+  .btn svg{width:14px;height:14px;}
+
+  #rx-report{}
+  .rx-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;}
+  .rx-summary-text{font-size:13.3px;line-height:1.65;color:var(--text-dim);margin-bottom:12px;}
+  .tag-row{display:flex;gap:7px;flex-wrap:wrap;}
+
+  .opp-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+  .opp-row:last-child{border-bottom:none;}
+  .opp-title{font-size:12.8px;font-weight:600;}
+  .opp-value{font-size:13.5px;font-weight:700;color:var(--teal);}
+
+  .trecho{
+    display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--border);
+  }
+  .trecho:last-child{border-bottom:none;}
+  .trecho-quote{font-size:13px;color:var(--text);font-style:italic;line-height:1.5;}
+  .trecho-quote::before{content:"“";}
+  .trecho-quote::after{content:"”";}
+
+  .donut-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .donut{width:132px;height:132px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;}
+  .donut-hole{width:88px;height:88px;background:var(--panel);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .donut-hole .num{font-size:22px;font-weight:700;font-family:'Space Grotesk';}
+  .donut-hole .lab{font-size:9.5px;color:var(--text-faint);}
+  .donut-legend{display:flex;gap:12px;font-size:11px;color:var(--text-faint);flex-wrap:wrap;justify-content:center;}
+
+  .risk-gauge{margin-top:14px;}
+  .risk-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;}
+  .risk-level{font-size:11px;font-weight:700;letter-spacing:.3px;}
+  .risk-pct{font-size:26px;font-weight:700;font-family:'Space Grotesk';}
+  .risk-track{height:7px;border-radius:5px;background:rgba(255,255,255,0.07);overflow:hidden;margin-bottom:10px;}
+  .risk-fill{height:100%;border-radius:5px;}
+  .risk-reason{font-size:11.5px;color:var(--text-faint);line-height:1.5;}
+  .risk-reason strong{color:var(--text-dim);}
+
+  /* ---------- ALERTS VIEW ---------- */
+  .alert-item{
+    display:flex;align-items:flex-start;gap:14px;padding:15px 4px;border-bottom:1px solid var(--border);cursor:pointer;
+    transition:background .12s;
+  }
+  .alert-item:hover{background:var(--card);border-radius:var(--radius-s);}
+  .alert-item:last-child{border-bottom:none;}
+  .alert-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .alert-dot.alta{background:var(--red);}
+  .alert-dot.media{background:var(--amber);}
+  .alert-dot.baixa{background:var(--teal);}
+  .alert-body{flex:1;}
+  .alert-title{font-size:13px;font-weight:600;margin-bottom:3px;}
+  .alert-title span{font-weight:400;color:var(--text-faint);}
+  .alert-quote{font-size:12.5px;color:var(--text-dim);font-style:italic;}
+  .alert-time{font-size:11px;color:var(--text-faint);white-space:nowrap;margin-top:2px;}
+
+  /* ---------- CHATBOT ---------- */
+  .chat-toggle{
+    position:fixed;right:24px;bottom:24px;width:56px;height:56px;border-radius:50%;
+    background:linear-gradient(135deg,var(--cyan),var(--teal));border:none;box-shadow:0 8px 24px rgba(63,208,242,.35);
+    display:flex;align-items:center;justify-content:center;z-index:50;
+  }
+  .chat-toggle svg{width:24px;height:24px;color:#04121f;}
+  .chat-toggle .ping{position:absolute;top:-2px;right:-2px;width:12px;height:12px;background:var(--red);border-radius:50%;border:2px solid var(--bg);}
+
+  .chat-panel{
+    position:fixed;right:24px;bottom:92px;width:360px;height:500px;max-height:70vh;
+    background:var(--bg-alt);border:1px solid var(--border-strong);border-radius:var(--radius-l);
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);z-index:50;
+  }
+  .chat-panel.hidden{display:none;}
+  .chat-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--panel);}
+  .chat-head-icon{width:32px;height:32px;border-radius:9px;background:var(--cyan-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .chat-head-icon svg{width:17px;height:17px;color:var(--cyan);}
+  .chat-head-title{font-size:13px;font-weight:600;}
+  .chat-head-sub{font-size:10.5px;color:var(--teal);display:flex;align-items:center;gap:5px;}
+  .chat-close{margin-left:auto;width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:none;display:flex;align-items:center;justify-content:center;color:var(--text-faint);}
+  .chat-close:hover{color:var(--text);}
+
+  .chat-body{flex:1;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:10px;}
+  .msg{max-width:88%;font-size:12.7px;line-height:1.55;padding:10px 12px;border-radius:12px;}
+  .msg.bot{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px;}
+  .msg.user{background:linear-gradient(135deg,var(--cyan),#2ba8c9);color:#04121f;font-weight:500;align-self:flex-end;border-bottom-right-radius:4px;}
+  .msg-result{
+    margin-top:8px;padding:9px 10px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);cursor:pointer;
+  }
+  .msg-result:hover{background:var(--card-hover);}
+  .msg-result-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  .msg-result-client{font-weight:700;font-size:12px;color:var(--cyan);}
+  .msg-result-date{font-size:10px;color:var(--text-faint);}
+  .msg-result-quote{font-style:italic;color:var(--text-dim);font-size:12px;}
+  .msg-result-tag{display:inline-block;margin-top:5px;font-size:9.5px;padding:2px 7px;border-radius:999px;}
+
+  .chip-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 12px;}
+  .chip-sug{padding:6px 11px;border-radius:999px;background:var(--card);border:1px solid var(--border);font-size:11px;color:var(--text-dim);}
+  .chip-sug:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  .chat-input-row{display:flex;align-items:center;gap:8px;padding:12px;border-top:1px solid var(--border);background:var(--panel);}
+  .chat-input-row input{
+    flex:1;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:10px 14px;color:var(--text);
+    outline:none;font-size:12.5px;font-family:inherit;
+  }
+  .chat-send{width:36px;height:36px;border-radius:50%;background:var(--cyan);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .chat-send svg{width:15px;height:15px;color:#04121f;}
+
+  .typing{display:flex;gap:4px;padding:4px 2px;}
+  .typing span{width:5px;height:5px;border-radius:50%;background:var(--text-faint);animation:blink 1.2s infinite ease-in-out;}
+  .typing span:nth-child(2){animation-delay:.15s;}
+  .typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes blink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:980px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .grid-2{grid-template-columns:1fr;}
+    .rx-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width:760px){
+    .sidebar{position:fixed;left:0;bottom:0;top:auto;width:100%;height:auto;flex-direction:row;
+      padding:8px 10px;border-right:none;border-top:1px solid var(--border);z-index:40;overflow-x:auto;}
+    .brand,.sidebar-foot{display:none;}
+    .nav{flex-direction:row;gap:4px;width:100%;justify-content:space-around;}
+    .navitem{flex-direction:column;gap:3px;font-size:9.5px;padding:6px 8px;}
+    .navitem svg{width:18px;height:18px;}
+    .main{padding-bottom:64px;}
+    .view{padding:18px 16px 90px;}
+    .kpi-row{grid-template-columns:1fr 1fr;}
+    .chat-panel{right:10px;left:10px;width:auto;bottom:80px;}
+    .chat-toggle{right:16px;bottom:76px;}
+    table thead{display:none;}
+    table, tbody, tr, td{display:block;width:100%;}
+    tr.rowlink{border:1px solid var(--border);border-radius:var(--radius-m);margin-bottom:10px;padding:10px;background:var(--panel);}
+    td{border-bottom:none;padding:4px 0;display:flex;justify-content:space-between;align-items:center;}
+    td::before{content:attr(data-label);color:var(--text-faint);font-size:10.5px;}
+  }
+
+  /* ---------- PRINT ---------- */
+  @media print{
+    body *{visibility:hidden;}
+    #rx-report, #rx-report *{visibility:visible;}
+    #rx-report{position:absolute;left:0;top:0;width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="19" stroke="#3fd0f2" stroke-opacity="0.35"/>
+        <circle cx="20" cy="20" r="13" stroke="#3fd0f2" stroke-opacity="0.5"/>
+        <circle cx="20" cy="20" r="7" stroke="#3fd0f2" stroke-opacity="0.7"/>
+        <path d="M20 20 L34 14 A19 19 0 0 1 34 14 Z" fill="#3fd0f2" fill-opacity="0.55"/>
+        <circle cx="20" cy="20" r="2" fill="#3fd0f2"/>
+      </svg>
+      <div class="brand-text">
+        <div class="b1">VOX RADAR</div>
+        <div class="b2">TOTVS VOX</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="navitem active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span class="navlabel">Dashboard</span>
+      </a>
+      <a class="navitem" data-view="meetings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <span class="navlabel">Reuniões</span>
+      </a>
+      <a class="navitem" data-view="raiox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12 L19 7"/></svg>
+        <span class="navlabel">Raio-X das conversas</span>
+      </a>
+      <a class="navitem" data-view="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <span class="navlabel">Alertas</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="profile">
+        <div class="avatar">RA</div>
+        <div>
+          <div class="profile-name">Ricardo Almeida</div>
+          <div class="profile-role">Diretor Comercial</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="global-search" placeholder="Buscar clientes, reuniões, oportunidades…">
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="pill"><span class="dot-live"></span> 3.428 reuniões processadas</div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view">
+      <div class="view-head">
+        <div>
+          <h1 class="view-title">Visão executiva</h1>
+          <div class="view-sub">Prioridades da carteira, atualizado a partir das últimas reuniões analisadas.</div>
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card" style="--accent:var(--cyan)">
+          <div class="kpi-label">Reuniões analisadas</div>
+          <div class="kpi-value">3.428</div>
+          <div class="kpi-delta up">↑ 4,2% vs. mês anterior</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--teal)">
+          <div class="kpi-label">Oportunidades identificadas</div>
+          <div class="kpi-value">126</div>
+          <div class="kpi-delta up">↑ 11% vs. mês anterior</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--red)">
+          <div class="kpi-label">Clientes em risco de churn</div>
+          <div class="kpi-value">18</div>
+          <div class="kpi-delta down">↑ 2 desde a última semana</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--teal)">
+          <div class="kpi-label">Receita potencial de upsell</div>
+          <div class="kpi-value">R$ 1.350.000</div>
+          <div class="kpi-delta up">↑ 6,4% vs. mês anterior</div>
+        </div>
+        <div class="kpi-card" style="--accent:var(--cyan)">
+          <div class="kpi-label">Sentimento médio</div>
+          <div class="kpi-value">78%</div>
+          <div class="kpi-delta up">↑ 3 pts vs. mês anterior</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Evolução de oportunidades e riscos</div>
+            <div class="legend"><span><i style="background:var(--teal)"></i>Oportunidades</span><span><i style="background:var(--red)"></i>Risco de churn</span></div>
+          </div>
+          <div id="trend-chart"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Heatmap de concorrentes citados</div></div>
+          <div id="heatmap"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <div class="panel-head"><div class="panel-title">Clientes prioritários</div></div>
+        <table>
+          <thead><tr><th>Cliente</th><th>Produto</th><th>Sentimento</th><th>Prob. churn</th><th>Receita potencial</th><th>Status</th><th></th></tr></thead>
+          <tbody id="priority-clients"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MEETINGS -->
+    <section id="view-meetings" class="view hidden">
+      <div class="view-head">
+        <div>
+          <h1 class="view-title">Reuniões analisadas</h1>
+          <div class="view-sub">Compare conversas e priorize onde vale abrir o raio-X.</div>
+        </div>
+      </div>
+      <div class="filters" id="meeting-filters"></div>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Cliente</th><th>Vendedor</th><th>Data</th><th>Duração</th><th>Sentimento</th><th>Alertas</th><th></th></tr></thead>
+          <tbody id="meetings-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- RAIO-X -->
+    <section id="view-raiox" class="view hidden">
+      <a class="back-btn" data-view="meetings">← Voltar para reuniões</a>
+      <div id="rx-report">
+        <div class="rx-header">
+          <div>
+            <h1 class="view-title" id="rx-client">—</h1>
+            <div class="rx-meta">
+              <span>👤 <strong id="rx-vendedor">—</strong></span>
+              <span>📅 <strong id="rx-data">—</strong></span>
+              <span>⏱ <strong id="rx-duracao">—</strong></span>
+            </div>
+          </div>
+          <button class="btn primary" id="export-pdf-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            Exportar PDF
+          </button>
+        </div>
+
+        <div class="rx-grid">
+          <div>
+            <div class="panel" style="margin-bottom:14px;">
+              <div class="panel-head"><div class="panel-title">Resumo executivo</div></div>
+              <div class="rx-summary-text" id="rx-resumo">—</div>
+              <div class="tag-row" id="rx-produtos"></div>
+            </div>
+
+            <div class="panel" style="margin-bottom:14px;">
+              <div class="panel-head"><div class="panel-title">Oportunidades detectadas</div></div>
+              <div id="rx-oportunidades"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><div class="panel-title">Trechos relevantes da conversa</div></div>
+              <div id="rx-trechos"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel" style="margin-bottom:14px;">
+              <div class="panel-head"><div class="panel-title">Sentimento da conversa</div></div>
+              <div class="donut-wrap">
+                <div class="donut" id="rx-donut"><div class="donut-hole"><div class="num" id="rx-sent-num">—</div><div class="lab">positivo</div></div></div>
+                <div class="donut-legend">
+                  <span><i style="width:8px;height:8px;border-radius:2px;background:var(--teal);display:inline-block;"></i> Positivo</span>
+                  <span><i style="width:8px;height:8px;border-radius:2px;background:var(--text-faint);display:inline-block;"></i> Neutro</span>
+                  <span><i style="width:8px;height:8px;border-radius:2px;background:var(--red);display:inline-block;"></i> Negativo</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><div class="panel-title">Risco de churn</div></div>
+              <div class="risk-gauge">
+                <div class="risk-top"><span class="risk-level" id="rx-risk-level">—</span><span class="risk-pct" id="rx-risk-pct">—</span></div>
+                <div class="risk-track"><div class="risk-fill" id="rx-risk-fill"></div></div>
+                <div class="risk-reason"><strong>Motivo identificado:</strong> <span id="rx-risk-motivo">—</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section id="view-alerts" class="view hidden">
+      <div class="view-head">
+        <div>
+          <h1 class="view-title">Alertas</h1>
+          <div class="view-sub">Fila de priorização gerada quando um sinal ultrapassa o critério configurado.</div>
+        </div>
+      </div>
+      <div class="panel" id="alerts-list"></div>
+    </section>
+
+  </div>
+</div>
+
+<!-- CHATBOT -->
+<button class="chat-toggle" id="chat-toggle" aria-label="Abrir assistente">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  <span class="ping"></span>
+</button>
+
+<div class="chat-panel hidden" id="chat-panel">
+  <div class="chat-head">
+    <div class="chat-head-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+    </div>
+    <div>
+      <div class="chat-head-title">Assistente Vox Radar</div>
+      <div class="chat-head-sub"><span class="dot-live"></span> buscando nas transcrições</div>
+    </div>
+    <button class="chat-close" id="chat-close">✕</button>
+  </div>
+  <div class="chat-body" id="chat-body"></div>
+  <div class="chip-row" id="chip-row"></div>
+  <div class="chat-input-row">
+    <input id="chat-input" placeholder="ex: onde tem upsell?" autocomplete="off">
+    <button class="chat-send" id="chat-send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   DATA — dados de demonstração do protótipo (US08, US10, US09)
+   ========================================================= */
+const meetings = [
+  {
+    id:1, cliente:"Grupo Alpha", vendedor:"Camila Rocha", data:"10/06/2026", duracao:"47min",
+    sentimento:78, sentBreak:{pos:78,neu:14,neg:8},
+    produtos:["TOTVS RM","Protheus","Fluig"],
+    receitaPotencial:"R$ 320.000", statusCarteira:"risco",
+    resumo:"Cliente demonstra insatisfação com processos manuais de folha de pagamento e menciona dificuldades operacionais. Existe potencial para oferta do módulo RM.",
+    risco:{pct:84,nivel:"alta",motivo:"Cliente mencionou avaliar soluções concorrentes."},
+    oportunidades:[
+      {titulo:"Módulo TOTVS RM Folha",valor:"R$ 180.000"},
+      {titulo:"Expansão Protheus Financeiro",valor:"R$ 120.000"},
+      {titulo:"Automação de obrigações fiscais",valor:"R$ 75.000"}
+    ],
+    trechos:[
+      {tag:"RISCO", texto:"A folha hoje é praticamente toda manual, dá muito retrabalho."},
+      {tag:"CONCORRENTE", texto:"Recebemos uma apresentação da SAP semana passada."},
+      {tag:"OPORTUNIDADE", texto:"Se tivéssemos isso integrado, conseguiríamos ganhar dois dias de fechamento."},
+      {tag:"PRODUTO CITADO", texto:"Já usamos o Protheus no financeiro há quatro anos."}
+    ]
+  },
+  {
+    id:2, cliente:"Construtora Beta", vendedor:"Rafael Lima", data:"10/06/2026", duracao:"32min",
+    sentimento:71, sentBreak:{pos:71,neu:19,neg:10},
+    produtos:["TOTVS RM"],
+    receitaPotencial:"R$ 180.000", statusCarteira:"atencao",
+    resumo:"Cliente relata retrabalho no controle de obras e abre espaço para automação do acompanhamento de canteiro.",
+    risco:{pct:52,nivel:"media",motivo:"Processo manual de obras ainda gera insatisfação recorrente."},
+    oportunidades:[
+      {titulo:"App de campo para obras",valor:"R$ 95.000"},
+      {titulo:"Integração RM com controle de obras",valor:"R$ 85.000"}
+    ],
+    trechos:[
+      {tag:"RISCO", texto:"O processo manual de obras ainda gera muito retrabalho para o time."},
+      {tag:"OPORTUNIDADE", texto:"Se desse pra integrar as filiais, a gente ganhava tempo de fechamento."},
+      {tag:"PRODUTO CITADO", texto:"Usamos o RM no financeiro, mas obras ainda é planilha."}
+    ]
+  },
+  {
+    id:3, cliente:"Indústria Gamma", vendedor:"Joana Prado", data:"09/06/2026", duracao:"58min",
+    sentimento:88, sentBreak:{pos:88,neu:10,neg:2},
+    produtos:["Fluig"],
+    receitaPotencial:"R$ 95.000", statusCarteira:"saudavel",
+    resumo:"Reunião de renovação. Cliente satisfeito com o Fluig e sinaliza intenção de revisar contrato em breve.",
+    risco:{pct:18,nivel:"baixa",motivo:"Nenhum sinal relevante de insatisfação identificado."},
+    oportunidades:[
+      {titulo:"Renovação antecipada com upgrade",valor:"R$ 95.000"}
+    ],
+    trechos:[
+      {tag:"RENOVAÇÃO", texto:"Contrato termina em 60 dias, queremos revisar as condições."},
+      {tag:"PRODUTO CITADO", texto:"O Fluig resolveu bem nosso fluxo de aprovações."},
+      {tag:"OPORTUNIDADE", texto:"Estamos pensando em ampliar o uso pra outras unidades no próximo ano."}
+    ]
+  },
+  {
+    id:4, cliente:"Rede Delta", vendedor:"Diego Sato", data:"09/06/2026", duracao:"41min",
+    sentimento:55, sentBreak:{pos:55,neu:25,neg:20},
+    produtos:["Protheus"],
+    receitaPotencial:"R$ 240.000", statusCarteira:"risco",
+    resumo:"Cliente demonstra interesse em ampliar o módulo de BI para outras filiais, mas cita lentidão no suporte atual.",
+    risco:{pct:61,nivel:"alta",motivo:"Cliente citou lentidão no atendimento em mais de uma ocasião."},
+    oportunidades:[
+      {titulo:"Expansão do módulo BI para outras filiais",valor:"R$ 160.000"},
+      {titulo:"Consultoria de implantação",valor:"R$ 80.000"}
+    ],
+    trechos:[
+      {tag:"OPORTUNIDADE", texto:"Queremos expandir o módulo de BI para outras filiais."},
+      {tag:"RISCO", texto:"O suporte tem demorado mais do que a gente esperava pra responder."},
+      {tag:"PRODUTO CITADO", texto:"O Protheus no centro de distribuição já está redondo."}
+    ]
+  },
+  {
+    id:5, cliente:"Logística Epsilon", vendedor:"Marina Alves", data:"08/06/2026", duracao:"53min",
+    sentimento:38, sentBreak:{pos:38,neu:22,neg:40},
+    produtos:["TOTVS RM"],
+    receitaPotencial:"R$ 410.000", statusCarteira:"risco",
+    resumo:"Cliente insatisfeito com o suporte do último trimestre e menciona avaliar alternativas de mercado.",
+    risco:{pct:91,nivel:"alta",motivo:"Cliente declarou insatisfação direta com o suporte e citou avaliação de alternativas."},
+    oportunidades:[
+      {titulo:"Plano de recuperação com squad dedicado",valor:"R$ 0"},
+      {titulo:"Upgrade de SLA de suporte",valor:"R$ 40.000"}
+    ],
+    trechos:[
+      {tag:"RISCO", texto:"Não estamos satisfeitos com o suporte do último trimestre."},
+      {tag:"CONCORRENTE", texto:"Já recebemos contato de outros fornecedores nesse período."},
+      {tag:"MENÇÃO", texto:"Se isso não melhorar, vamos ter que rever o contrato."}
+    ]
+  },
+  {
+    id:6, cliente:"Varejo Zeta", vendedor:"Bruno Castro", data:"07/06/2026", duracao:"29min",
+    sentimento:62, sentBreak:{pos:62,neu:28,neg:10},
+    produtos:["Fluig"],
+    receitaPotencial:"R$ 60.000", statusCarteira:"saudavel",
+    resumo:"Reunião de acompanhamento de rotina, sem sinais críticos. Cliente pergunta sobre novas automações de aprovação.",
+    risco:{pct:24,nivel:"baixa",motivo:"Nenhum sinal relevante de insatisfação identificado."},
+    oportunidades:[
+      {titulo:"Automação de aprovações de compras",valor:"R$ 60.000"}
+    ],
+    trechos:[
+      {tag:"OPORTUNIDADE", texto:"Dá pra automatizar a aprovação de compras acima de um valor?"},
+      {tag:"PRODUTO CITADO", texto:"O Fluig está rodando bem no dia a dia do time."}
+    ]
+  },
+  {
+    id:7, cliente:"Agro Eta", vendedor:"Camila Rocha", data:"05/06/2026", duracao:"39min",
+    sentimento:47, sentBreak:{pos:47,neu:23,neg:30},
+    produtos:["Protheus Agro"],
+    receitaPotencial:"R$ 145.000", statusCarteira:"atencao",
+    resumo:"Cliente cita dificuldades na safra atual com o módulo agro e pede revisão do plano de suporte.",
+    risco:{pct:57,nivel:"media",motivo:"Reclamações recorrentes sobre o módulo agro na última safra."},
+    oportunidades:[
+      {titulo:"Módulo de rastreabilidade agro",valor:"R$ 90.000"},
+      {titulo:"Treinamento avançado da equipe de campo",valor:"R$ 55.000"}
+    ],
+    trechos:[
+      {tag:"RISCO", texto:"Tivemos bastante dificuldade com o módulo agro nessa safra."},
+      {tag:"OPORTUNIDADE", texto:"Precisamos de rastreabilidade completa pro próximo ciclo."},
+      {tag:"PRODUTO CITADO", texto:"O Protheus Agro cobre boa parte, mas falta o rastreio."}
+    ]
+  }
+];
+
+const alerts = [
+  {clienteId:1, tipo:"Menção a concorrente", nivel:"alta", quote:"Estamos avaliando uma proposta de SAP para folha.", tempo:"há 12 min"},
+  {clienteId:5, tipo:"Risco de churn", nivel:"alta", quote:"Não estamos satisfeitos com o suporte do último trimestre.", tempo:"há 28 min"},
+  {clienteId:4, tipo:"Oportunidade de upsell", nivel:"media", quote:"Queremos expandir o módulo de BI para outras filiais.", tempo:"há 1h"},
+  {clienteId:2, tipo:"Insatisfação", nivel:"media", quote:"O processo manual de obras ainda gera retrabalho.", tempo:"há 2h"},
+  {clienteId:3, tipo:"Renovação próxima", nivel:"baixa", quote:"Contrato termina em 60 dias, querem revisar.", tempo:"há 3h"}
+];
+
+const competitors = [
+  {nome:"SAP", count:156, level:"alta"},
+  {nome:"Oracle", count:112, level:"alta"},
+  {nome:"Microsoft", count:87, level:"media"},
+  {nome:"Senior", count:64, level:"media"},
+  {nome:"Sankhya", count:32, level:"baixa"}
+];
+
+const trend = {
+  meses:["Jan","Fev","Mar","Abr","Mai","Jun"],
+  oportunidades:[52,61,74,88,103,126],
+  risco:[9,11,10,14,16,18]
+};
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+function levelColor(level){
+  if(level==="alta"||level==="risco") return "var(--red)";
+  if(level==="media"||level==="atencao") return "var(--amber)";
+  return "var(--teal)";
+}
+function statusLabel(s){
+  return s==="risco" ? "Alto risco" : s==="atencao" ? "Atenção" : "Saudável";
+}
+function sentColor(v){
+  if(v>=65) return "var(--teal)";
+  if(v>=45) return "var(--amber)";
+  return "var(--red)";
+}
+function tagColor(tag){
+  const t = tag.toUpperCase();
+  if(t.includes("RISCO")) return "var(--red)";
+  if(t.includes("OPORTUNIDADE")) return "var(--teal)";
+  if(t.includes("CONCORRENTE")) return "var(--amber)";
+  if(t.includes("RENOVAÇÃO") || t.includes("RENOVACAO")) return "var(--cyan)";
+  return "var(--cyan)";
+}
+
+/* =========================================================
+   RENDER: DASHBOARD
+   ========================================================= */
+function renderPriorityClients(){
+  const tbody = document.getElementById('priority-clients');
+  tbody.innerHTML = meetings.map(m=>`
+    <tr class="rowlink" onclick="openRaioX(${m.id})">
+      <td data-label="Cliente" class="cell-strong">${m.cliente}</td>
+      <td data-label="Produto" class="cell-dim">${m.produtos[0]}</td>
+      <td data-label="Sentimento"><div class="sent-bar"><div class="sent-track"><div class="sent-fill" style="width:${m.sentimento}%;background:${sentColor(m.sentimento)}"></div></div>${m.sentimento}%</div></td>
+      <td data-label="Prob. churn">${m.risco.pct}%</td>
+      <td data-label="Receita potencial" class="cell-strong">${m.receitaPotencial}</td>
+      <td data-label="Status"><span class="badge ${m.statusCarteira}">${statusLabel(m.statusCarteira)}</span></td>
+      <td><div class="go">›</div></td>
+    </tr>
+  `).join('');
+}
+
+function renderHeatmap(){
+  const max = Math.max(...competitors.map(c=>c.count));
+  document.getElementById('heatmap').innerHTML = competitors.map(c=>`
+    <div class="heat-row">
+      <div class="heat-name">${c.nome}</div>
+      <div class="heat-bar-track"><div class="heat-bar-fill" style="width:${(c.count/max*100).toFixed(0)}%;background:${levelColor(c.level)}"></div></div>
+      <div class="heat-count">${c.count} menções</div>
+    </div>
+  `).join('');
+}
+
+function renderTrendChart(){
+  const w=460,h=180,pad=28;
+  const maxY = Math.max(...trend.oportunidades, ...trend.risco) * 1.15;
+  const stepX = (w - pad*2) / (trend.meses.length - 1);
+  const toPts = arr => arr.map((v,i)=>{
+    const x = pad + i*stepX;
+    const y = h - pad - (v/maxY)*(h-pad*1.6);
+    return [x,y];
+  });
+  const oppPts = toPts(trend.oportunidades);
+  const riskPts = toPts(trend.risco);
+  const toPath = pts => "M"+pts.map(p=>p.join(",")).join(" L ");
+  const dots = (pts,color) => pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${color}"/>`).join('');
+  const labels = trend.meses.map((m,i)=>`<text x="${pad+i*stepX}" y="${h-6}" font-size="9.5" fill="var(--text-faint)" text-anchor="middle" font-family="IBM Plex Mono">${m}</text>`).join('');
+
+  document.getElementById('trend-chart').innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:190px;">
+      ${[0,1,2,3].map(i=>`<line x1="${pad}" y1="${pad+i*(h-pad*1.6)/3}" x2="${w-pad}" y2="${pad+i*(h-pad*1.6)/3}" stroke="rgba(255,255,255,0.05)"/>`).join('')}
+      <path d="${toPath(oppPts)}" fill="none" stroke="var(--teal)" stroke-width="2.3"/>
+      <path d="${toPath(riskPts)}" fill="none" stroke="var(--red)" stroke-width="2.3"/>
+      ${dots(oppPts,"var(--teal)")}
+      ${dots(riskPts,"var(--red)")}
+      ${labels}
+    </svg>
+  `;
+}
+
+/* =========================================================
+   RENDER: MEETINGS
+   ========================================================= */
+let currentFilter = "todas";
+function renderMeetingFilters(){
+  const filters = ["todas","risco","atencao","saudavel"];
+  const labels = {todas:"Todas", risco:"Alto risco", atencao:"Atenção", saudavel:"Saudável"};
+  document.getElementById('meeting-filters').innerHTML = filters.map(f=>`
+    <button class="chip-filter ${f===currentFilter?'active':''}" onclick="setMeetingFilter('${f}')">${labels[f]}</button>
+  `).join('');
+}
+function setMeetingFilter(f){ currentFilter=f; renderMeetingFilters(); renderMeetingsTable(); }
+
+function renderMeetingsTable(){
+  const list = meetings.filter(m => currentFilter==="todas" || m.statusCarteira===currentFilter);
+  document.getElementById('meetings-table').innerHTML = list.map(m=>`
+    <tr class="rowlink" onclick="openRaioX(${m.id})">
+      <td data-label="Cliente" class="cell-strong">${m.cliente}</td>
+      <td data-label="Vendedor" class="cell-dim">${m.vendedor}</td>
+      <td data-label="Data">${m.data.slice(0,5)}</td>
+      <td data-label="Duração">${m.duracao}</td>
+      <td data-label="Sentimento">${m.sentimento}%</td>
+      <td data-label="Alertas">${alertCountFor(m.id)>0 ? `<span class="badge risco">${alertCountFor(m.id)} alerta${alertCountFor(m.id)>1?'s':''}</span>` : '<span class="cell-dim">—</span>'}</td>
+      <td><div class="go">›</div></td>
+    </tr>
+  `).join('');
+}
+function alertCountFor(id){ return alerts.filter(a=>a.clienteId===id).length; }
+
+/* =========================================================
+   RENDER: RAIO-X
+   ========================================================= */
+function openRaioX(id){
+  const m = meetings.find(x=>x.id===id);
+  if(!m) return;
+  document.getElementById('rx-client').textContent = m.cliente;
+  document.getElementById('rx-vendedor').textContent = m.vendedor;
+  document.getElementById('rx-data').textContent = m.data;
+  document.getElementById('rx-duracao').textContent = m.duracao;
+  document.getElementById('rx-resumo').textContent = m.resumo;
+  document.getElementById('rx-produtos').innerHTML = m.produtos.map(p=>`<span class="badge tag">${p}</span>`).join('');
+
+  document.getElementById('rx-oportunidades').innerHTML = m.oportunidades.map(o=>`
+    <div class="opp-row"><div class="opp-title">${o.titulo}</div><div class="opp-value">${o.valor}</div></div>
+  `).join('') || '<div class="cell-dim">Nenhuma oportunidade detectada.</div>';
+
+  document.getElementById('rx-trechos').innerHTML = m.trechos.map(t=>`
+    <div class="trecho">
+      <span class="badge tag" style="background:transparent;border:1px solid ${tagColor(t.tag)};color:${tagColor(t.tag)};white-space:nowrap;">${t.tag}</span>
+      <div class="trecho-quote">${t.texto}</div>
+    </div>
+  `).join('');
+
+  const b = m.sentBreak;
+  document.getElementById('rx-donut').style.background =
+    `conic-gradient(var(--teal) 0% ${b.pos}%, var(--text-faint) ${b.pos}% ${b.pos+b.neu}%, var(--red) ${b.pos+b.neu}% 100%)`;
+  document.getElementById('rx-sent-num').textContent = m.sentimento+"%";
+
+  document.getElementById('rx-risk-level').textContent =
+    (m.risco.nivel==="alta"?"● Alta probabilidade":m.risco.nivel==="media"?"● Probabilidade média":"● Baixa probabilidade");
+  document.getElementById('rx-risk-level').style.color = levelColor(m.risco.nivel);
+  document.getElementById('rx-risk-pct').textContent = m.risco.pct+"%";
+  document.getElementById('rx-risk-pct').style.color = levelColor(m.risco.nivel);
+  document.getElementById('rx-risk-fill').style.width = m.risco.pct+"%";
+  document.getElementById('rx-risk-fill').style.background = levelColor(m.risco.nivel);
+  document.getElementById('rx-risk-motivo').textContent = m.risco.motivo;
+
+  switchView('raiox');
+}
+
+document.getElementById('export-pdf-btn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('export-pdf-btn');
+  const original = btn.innerHTML;
+  btn.innerHTML = "Gerando PDF…";
+  const el = document.getElementById('rx-report');
+  try{
+    const canvas = await html2canvas(el, {backgroundColor:"#0a1628", scale:2});
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','pt','a4');
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW - 40;
+    const imgH = canvas.height * (imgW / canvas.width);
+    let heightLeft = imgH, position = 20;
+    pdf.addImage(imgData,'PNG',20,position,imgW,imgH);
+    heightLeft -= (pageH - 40);
+    while(heightLeft > 0){
+      position = heightLeft - imgH + 20;
+      pdf.addPage();
+      pdf.addImage(imgData,'PNG',20,position,imgW,imgH);
+      heightLeft -= (pageH - 40);
+    }
+    const clientName = document.getElementById('rx-client').textContent.replace(/\s+/g,'-').toLowerCase();
+    pdf.save(`vox-radar-raiox-${clientName}.pdf`);
+  }catch(e){
+    alert("Não foi possível gerar o PDF. Tente novamente.");
+  }
+  btn.innerHTML = original;
+});
+
+/* =========================================================
+   RENDER: ALERTS
+   ========================================================= */
+function renderAlerts(){
+  document.getElementById('alerts-list').innerHTML = alerts.map(a=>{
+    const m = meetings.find(x=>x.id===a.clienteId);
+    return `
+    <div class="alert-item" onclick="openRaioX(${a.clienteId})">
+      <div class="alert-dot ${a.nivel}"></div>
+      <div class="alert-body">
+        <div class="alert-title">${m.cliente} <span>· ${a.tipo}</span></div>
+        <div class="alert-quote">"${a.quote}"</div>
+      </div>
+      <div class="alert-time">${a.tempo}</div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================
+   VIEW SWITCHING
+   ========================================================= */
+function switchView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.getElementById('view-'+view).classList.remove('hidden');
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
+  window.scrollTo({top:0,behavior:'instant'});
+}
+document.querySelectorAll('[data-view]').forEach(el=>{
+  el.addEventListener('click', ()=> switchView(el.dataset.view));
+});
+
+/* =========================================================
+   GLOBAL SEARCH (dashboard topbar) -> jumps to matching client raio-x
+   ========================================================= */
+document.getElementById('global-search').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){
+    const q = normalize(e.target.value);
+    const hit = meetings.find(m=>normalize(m.cliente).includes(q));
+    if(hit) openRaioX(hit.id);
+  }
+});
+
+/* =========================================================
+   CHATBOT
+   ========================================================= */
+const chatToggle = document.getElementById('chat-toggle');
+const chatPanel = document.getElementById('chat-panel');
+const chatBody = document.getElementById('chat-body');
+const chatInput = document.getElementById('chat-input');
+const chipRow = document.getElementById('chip-row');
+
+const tagSynonyms = {
+  "upsell":"OPORTUNIDADE","up-sell":"OPORTUNIDADE","cross-sell":"OPORTUNIDADE","crosssell":"OPORTUNIDADE",
+  "cross sell":"OPORTUNIDADE","oportunidade":"OPORTUNIDADE","oportunidades":"OPORTUNIDADE","venda":"OPORTUNIDADE",
+  "risco":"RISCO","riscos":"RISCO","churn":"RISCO","insatisfacao":"RISCO","insatisfação":"RISCO",
+  "concorrente":"CONCORRENTE","concorrentes":"CONCORRENTE","concorrencia":"CONCORRENTE","concorrência":"CONCORRENTE",
+  "produto":"PRODUTO CITADO","produtos":"PRODUTO CITADO",
+  "renovacao":"RENOVAÇÃO","renovação":"RENOVAÇÃO","renovacoes":"RENOVAÇÃO"
+};
+const suggestions = ["upsell", "risco de churn", "concorrentes", "renovação", "alertas"];
+
+function normalize(s){
+  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+}
+
+function addMsg(html, cls){
+  const div = document.createElement('div');
+  div.className = "msg "+cls;
+  div.innerHTML = html;
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
+  return div;
+}
+
+function botTyping(){
+  const div = addMsg(`<div class="typing"><span></span><span></span><span></span></div>`, "bot");
+  return div;
+}
+
+function searchTranscripts(query){
+  const q = normalize(query);
+  const matchedTags = new Set();
+  Object.keys(tagSynonyms).forEach(key=>{ if(q.includes(key)) matchedTags.add(tagSynonyms[key]); });
+
+  let results = [];
+  if(matchedTags.size > 0){
+    meetings.forEach(m=> m.trechos.forEach(t=>{
+      if(matchedTags.has(t.tag.toUpperCase())) results.push({m,t});
+    }));
+  } else {
+    meetings.forEach(m=> m.trechos.forEach(t=>{
+      if(normalize(t.texto).includes(q) || normalize(t.tag).includes(q) || normalize(m.cliente).includes(q)) results.push({m,t});
+    }));
+    if(results.length===0){
+      meetings.forEach(m=>{ if(m.produtos.some(p=>normalize(p).includes(q))) results.push({m,t:{tag:"PRODUTO CITADO",texto:`Cliente citou ${m.produtos.find(p=>normalize(p).includes(q))} na conversa.`}}); });
+    }
+  }
+  return results;
+}
+
+function renderResultsMsg(results, label){
+  if(results.length===0){
+    addMsg(`Não encontrei ocorrências de <strong>"${label}"</strong> nas transcrições analisadas. Tente "upsell", "risco de churn" ou "concorrentes".`, "bot");
+    return;
+  }
+  const listHtml = results.slice(0,6).map(r=>`
+    <div class="msg-result" onclick="openRaioX(${r.m.id}); toggleChat(false);">
+      <div class="msg-result-top">
+        <span class="msg-result-client">${r.m.cliente}</span>
+        <span class="msg-result-date">${r.m.data}</span>
+      </div>
+      <div class="msg-result-quote">"${r.t.texto}"</div>
+      <span class="msg-result-tag" style="background:transparent;border:1px solid ${tagColor(r.t.tag)};color:${tagColor(r.t.tag)}">${r.t.tag}</span>
+    </div>
+  `).join('');
+  const header = `Encontrei <strong>${results.length}</strong> ocorrência${results.length>1?'s':''} de <strong>"${label}"</strong> nas transcrições:`;
+  addMsg(header + listHtml, "bot");
+}
+
+function handleUserMessage(text){
+  addMsg(text, "user");
+  chatInput.value = "";
+  const typingEl = botTyping();
+
+  setTimeout(()=>{
+    typingEl.remove();
+    const q = normalize(text);
+
+    if(["oi","ola","olá","ajuda","help"].some(k=>q===k || q.includes(k))){
+      addMsg(`Posso buscar ocorrências específicas nas transcrições analisadas. Tente perguntar algo como <strong>"onde tem upsell"</strong>, <strong>"risco de churn"</strong> ou o nome de um cliente.`, "bot");
+      return;
+    }
+    if(q.includes("alerta")){
+      const listHtml = alerts.slice(0,5).map(a=>{
+        const m = meetings.find(x=>x.id===a.clienteId);
+        return `<div class="msg-result" onclick="openRaioX(${a.clienteId}); toggleChat(false);">
+          <div class="msg-result-top"><span class="msg-result-client">${m.cliente}</span><span class="msg-result-date">${a.tempo}</span></div>
+          <div class="msg-result-quote">"${a.quote}"</div>
+          <span class="msg-result-tag" style="background:transparent;border:1px solid ${levelColor(a.nivel)};color:${levelColor(a.nivel)}">${a.tipo}</span>
+        </div>`;
+      }).join('');
+      addMsg(`Aqui estão os alertas ativos mais recentes:` + listHtml, "bot");
+      return;
+    }
+
+    const results = searchTranscripts(text);
+    renderResultsMsg(results, text.trim());
+  }, 520);
+}
+
+function renderChips(){
+  chipRow.innerHTML = suggestions.map(s=>`<button class="chip-sug" onclick="handleUserMessage('${s}')">${s}</button>`).join('');
+}
+
+document.getElementById('chat-send').addEventListener('click', ()=>{
+  if(chatInput.value.trim()) handleUserMessage(chatInput.value.trim());
+});
+chatInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && chatInput.value.trim()) handleUserMessage(chatInput.value.trim());
+});
+
+function toggleChat(force){
+  const show = force !== undefined ? force : chatPanel.classList.contains('hidden');
+  chatPanel.classList.toggle('hidden', !show);
+  if(show) chatInput.focus();
+}
+chatToggle.addEventListener('click', ()=>toggleChat());
+document.getElementById('chat-close').addEventListener('click', ()=>toggleChat(false));
+
+/* initial bot greeting */
+function initChat(){
+  addMsg(`Olá, Ricardo. Sou o assistente do Vox Radar. Pergunte por sinais específicos — por exemplo, <strong>"onde tem upsell"</strong> — e eu localizo os trechos nas transcrições.`, "bot");
+  renderChips();
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+renderPriorityClients();
+renderHeatmap();
+renderTrendChart();
+renderMeetingFilters();
+renderMeetingsTable();
+renderAlerts();
+initChat();
+</script>
+</body>
+</html>
